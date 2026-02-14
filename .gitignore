@@ -1,0 +1,7 @@
+# Ignore everything by default
+*
+
+# Track the static site output
+!.gitignore
+!docs/
+!docs/**

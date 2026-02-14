@@ -1,0 +1,39 @@
+{
+  "title": "Go Concurrency Mastery",
+  "overview": [
+    {
+      "id": "COMPLETE_COURSE_CURRICULUM",
+      "title": "Go Concurrency Mastery: Complete Course Curriculum",
+      "filename": "COMPLETE_COURSE_CURRICULUM.md"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "chapter-01",
+      "title": "Chapter 01: The Race Condition Crisis",
+      "dir": "chapter-01",
+      "parts": [
+        {
+          "id": "PART0_INTRODUCTION",
+          "title": "Chapter 1, Part 0: Introduction and Setup",
+          "filename": "PART0_INTRODUCTION.md"
+        },
+        {
+          "id": "PART1_SEQUENTIAL_BASELINE",
+          "title": "Chapter 1, Part 1: The Sequential Baseline",
+          "filename": "PART1_SEQUENTIAL_BASELINE.md"
+        },
+        {
+          "id": "PART3_RACE_CONDITIONS_DEEP_DIVE",
+          "title": "Chapter 1, Part 3: What IS a Race Condition? - Deep Dive",
+          "filename": "PART3_RACE_CONDITIONS_DEEP_DIVE.md"
+        },
+        {
+          "id": "PART4_SOLUTION_CHANNELS",
+          "title": "Chapter 1, Part 4: Solution #1 - Channels",
+          "filename": "PART4_SOLUTION_CHANNELS.md"
+        }
+      ]
+    }
+  ]
+}

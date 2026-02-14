@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go Concurrency Course</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" class="hljs-theme" data-theme="light">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" class="hljs-theme" data-theme="dark" disabled>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<header class="header">
+  <button class="menu-toggle" onclick="toggleMobile()">&#9776;</button>
+  <div class="header-brand">
+    <div class="header-logo">Go</div>
+    <span class="header-title">Go Concurrency</span>
+    <div class="header-sep"></div>
+    <span class="header-part-title" id="headerPart">Select a section to begin</span>
+  </div>
+  <div class="section-nav" id="sectionNav" style="display:none">
+    <button class="nav-btn" id="prevSection" onclick="prevSlide()">&#8249;</button>
+    <span class="section-indicator" id="sectionIndicator">1 / 1</span>
+    <button class="nav-btn" id="nextSection" onclick="nextSlide()">&#8250;</button>
+  </div>
+  <div class="header-right">
+    <button class="nav-btn font-btn" onclick="changeFontSize(-1)" title="Decrease font size">A&#8722;</button>
+    <button class="nav-btn font-btn" onclick="changeFontSize(1)" title="Increase font size">A+</button>
+    <button class="nav-btn" id="darkToggle" onclick="toggleDark()" title="Toggle dark mode"><span id="darkIcon">&#9789;</span></button>
+    <button class="nav-btn" title="Toggle sidebar" onclick="toggleSidebar()" style="font-size:14px">&#9776;</button>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div id="sidebarContent">
+      <div class="loading"><div class="spinner"></div><div class="loading-text">Loading...</div></div>
+    </div>
+  </nav>
+
+  <div class="main" id="mainArea">
+    <div class="sections-container" id="sectionsContainer">
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">Go</div>
+        <h1>Go Concurrency Mastery</h1>
+        <p>A hands-on course to master concurrent programming in Go. Navigate sections horizontally with arrow keys or buttons.</p>
+        <button class="welcome-btn" onclick="loadFirst()">Start Reading</button>
+        <a class="welcome-btn resume-btn" id="resumeBtn" style="display:none" href="#">Continue Reading</a>
+        <div class="welcome-hint">Use &#8592; &#8594; arrow keys to navigate sections</div>
+      </div>
+    </div>
+    <div class="section-dots" id="sectionDots"></div>
+  </div>
+</div>
+
+<script>
+var __BASE_PATH__ = ".";
+var __PAGE_ID__ = "";
+var __PAGE_CONTENT__ = "";
+var __STRUCTURE__ = {"title":"Go Concurrency Mastery","overview":[{"id":"COMPLETE_COURSE_CURRICULUM","title":"Go Concurrency Mastery: Complete Course Curriculum","filename":"COMPLETE_COURSE_CURRICULUM.md"}],"chapters":[{"id":"chapter-01","title":"Chapter 01: The Race Condition Crisis","dir":"chapter-01","parts":[{"id":"PART0_INTRODUCTION","title":"Chapter 1, Part 0: Introduction and Setup","filename":"PART0_INTRODUCTION.md"},{"id":"PART1_SEQUENTIAL_BASELINE","title":"Chapter 1, Part 1: The Sequential Baseline","filename":"PART1_SEQUENTIAL_BASELINE.md"},{"id":"PART3_RACE_CONDITIONS_DEEP_DIVE","title":"Chapter 1, Part 3: What IS a Race Condition? - Deep Dive","filename":"PART3_RACE_CONDITIONS_DEEP_DIVE.md"},{"id":"PART4_SOLUTION_CHANNELS","title":"Chapter 1, Part 4: Solution #1 - Channels","filename":"PART4_SOLUTION_CHANNELS.md"}]}]};
+</script>
+<script src="./app.js"></script>
+</body>
+</html>
