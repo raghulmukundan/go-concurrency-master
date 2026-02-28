@@ -114,10 +114,15 @@ function renderSections(md) {
   sections = [];
   var current = [];
 
+  var inCodeBlock = false;
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
-    // Split at h1 and h2 headings (# and ##), but not h3+
-    if (line.match(/^#{1,2} /) && current.length > 0) {
+    // Track fenced code blocks so we don't split on # inside them
+    if (line.indexOf(String.fromCharCode(96,96,96)) === 0 || line.match(/^~{3,}/)) {
+      inCodeBlock = !inCodeBlock;
+    }
+    // Split at h1 and h2 headings (# and ##), but not h3+ and not inside code blocks
+    if (!inCodeBlock && line.match(/^#{1,2} /) && current.length > 0) {
       sections.push(current.join('\n'));
       current = [line];
     } else {
