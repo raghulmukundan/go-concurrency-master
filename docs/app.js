@@ -11,6 +11,7 @@ var currentContent = (typeof __PAGE_CONTENT__ !== 'undefined') ? __PAGE_CONTENT_
 var courseData = null;
 var allParts = [];
 var readParts = new Set(JSON.parse(localStorage.getItem('readParts') || '[]'));
+var collapseState = JSON.parse(localStorage.getItem('collapseState') || '{}');
 var sections = [];
 var currentSlideIdx = 0;
 
@@ -26,6 +27,12 @@ function init() {
     document.getElementById('sidebarContent').innerHTML =
       '<div class="loading"><div class="loading-text">Failed to load navigation</div></div>';
     return;
+  }
+
+  // Auto-expand the active part whenever a page loads
+  if (currentPageId) {
+    collapseState[currentPageId] = true;
+    saveCollapseState();
   }
 
   buildSidebar();
@@ -71,38 +78,134 @@ function buildSidebar() {
   var html = '';
   allParts = [];
 
-  if (courseData.overview && courseData.overview.length > 0) {
-    html += '<div class="sidebar-chapter">Course Overview</div>';
-    courseData.overview.forEach(function(ov) {
-      var ovId = '_overview/' + ov.filename;
-      var url = basePath + '/' + ov.filename.replace('.md', '.html');
-      var isRead = readParts.has(ovId);
-      var isActive = currentPageId === ovId;
-      var cls = 'sidebar-item' + (isRead ? ' read' : '') + (isActive ? ' active' : '');
-      html += '<a class="' + cls + '" href="' + url + '">';
-      html += '<span class="sidebar-item-icon">' + (isRead ? '&#10003;' : '&#128218;') + '</span>';
-      html += '<span>' + escapeHtml(ov.title) + '</span>';
-      html += '</a>';
-    });
-  }
-
+  // First pass: always populate allParts for prev/next navigation
   courseData.chapters.forEach(function(chapter) {
-    html += '<div class="sidebar-chapter">' + escapeHtml(chapter.title) + '</div>';
-    chapter.parts.forEach(function(part, idx) {
+    chapter.parts.forEach(function(part) {
       var partId = chapter.id + '/' + part.filename;
       var url = basePath + '/' + chapter.dir + '/' + part.filename.replace('.md', '.html');
       allParts.push({ chapterId: chapter.id, part: part, fullId: partId, url: url });
-      var isRead = readParts.has(partId);
-      var isActive = currentPageId === partId;
-      var cls = 'sidebar-item' + (isRead ? ' read' : '') + (isActive ? ' active' : '');
-      html += '<a class="' + cls + '" href="' + url + '">';
-      html += '<span class="sidebar-item-icon">' + (isRead ? '&#10003;' : (idx+1)) + '</span>';
-      html += '<span>' + escapeHtml(simplifyTitle(part.title)) + '</span>';
-      html += '</a>';
     });
   });
 
+  // Overview section
+  if (courseData.overview && courseData.overview.length > 0) {
+    var ovOpen = collapseState['_overview'] !== false;
+    html += '<div class="sidebar-group-header" id="sidebarOverviewHdr" onclick="toggleGroup(\'_overview\')">';
+    html += '<span class="sidebar-caret' + (ovOpen ? ' open' : '') + '">&#9656;</span>';
+    html += '<span class="sidebar-group-icon">&#9776;</span>';
+    html += '<span>Course Overview</span>';
+    html += '</div>';
+    if (ovOpen) {
+      courseData.overview.forEach(function(ov) {
+        var ovId = '_overview/' + ov.filename;
+        var url = basePath + '/' + ov.filename.replace('.md', '.html');
+        var isRead = readParts.has(ovId);
+        var isActive = currentPageId === ovId;
+        var cls = 'sidebar-item' + (isRead ? ' read' : '') + (isActive ? ' active' : '');
+        html += '<a class="' + cls + '" href="' + url + '">';
+        html += '<span class="sidebar-item-icon">' + (isRead ? '&#10004;' : '&#128218;') + '</span>';
+        html += '<span>' + escapeHtml(ov.title) + '</span>';
+        html += '</a>';
+      });
+    }
+  }
+
+  // Chapters
+  courseData.chapters.forEach(function(chapter) {
+    var chOpen = collapseState[chapter.id] !== undefined ? collapseState[chapter.id] : true;
+
+    html += '<div class="sidebar-group-header" onclick="toggleGroup(\'' + chapter.id + '\')">';
+    html += '<span class="sidebar-caret' + (chOpen ? ' open' : '') + '">&#9656;</span>';
+    html += '<span class="sidebar-group-icon">&#9670;</span>';
+    html += '<span>' + escapeHtml(chapter.title) + '</span>';
+    html += '</div>';
+
+    if (chOpen) {
+      chapter.parts.forEach(function(part, idx) {
+        var partId = chapter.id + '/' + part.filename;
+        var url = basePath + '/' + chapter.dir + '/' + part.filename.replace('.md', '.html');
+        var isRead = readParts.has(partId);
+        var isActive = currentPageId === partId;
+        var hasSections = isActive && sections.length > 1;
+        var partOpen = collapseState[partId] !== undefined ? collapseState[partId] : isActive;
+
+        var iconHtml = '<span class="sidebar-item-icon">' + (isRead ? '&#10004;' : (idx + 1)) + '</span>';
+
+        if (hasSections) {
+          var cls = 'sidebar-part-header' + (isActive ? ' active' : '') + (isRead ? ' read' : '');
+          html += '<div class="' + cls + '" onclick="togglePart(\'' + partId + '\')">';
+          html += iconHtml;
+          html += '<span class="sidebar-part-title">' + escapeHtml(simplifyTitle(part.title)) + '</span>';
+          html += '<span class="sidebar-caret' + (partOpen ? ' open' : '') + '">&#9656;</span>';
+          html += '</div>';
+          if (partOpen) {
+            html += '<div class="sidebar-part-body">';
+            sections.forEach(function(sec, sIdx) {
+              var title = getSectionTitle(sec);
+              var isActiveSec = sIdx === currentSlideIdx;
+              html += '<div class="sidebar-section-item' + (isActiveSec ? ' active' : '') + '" onclick="goToSlide(' + sIdx + ')">';
+              html += '<span class="sidebar-section-dot">&#8250;</span>';
+              html += '<span>' + escapeHtml(title) + '</span>';
+              html += '</div>';
+            });
+            html += '</div>';
+          }
+        } else {
+          var cls2 = 'sidebar-item' + (isActive ? ' active' : '') + (isRead ? ' read' : '');
+          html += '<a class="' + cls2 + '" href="' + url + '">';
+          html += iconHtml;
+          html += '<span>' + escapeHtml(simplifyTitle(part.title)) + '</span>';
+          html += '</a>';
+        }
+      });
+    }
+  });
+
   container.innerHTML = html;
+
+  // Scroll active section into view
+  var activeSection = container.querySelector('.sidebar-section-item.active');
+  if (activeSection) activeSection.scrollIntoView({ block: 'nearest' });
+}
+
+function saveCollapseState() {
+  localStorage.setItem('collapseState', JSON.stringify(collapseState));
+}
+
+function toggleGroup(key) {
+  var currentlyOpen = collapseState[key] !== undefined ? collapseState[key] : true;
+  collapseState[key] = !currentlyOpen;
+  saveCollapseState();
+  buildSidebar();
+}
+
+function togglePart(partId) {
+  var isActive = partId === currentPageId;
+  var currentlyOpen = collapseState[partId] !== undefined ? collapseState[partId] : isActive;
+  collapseState[partId] = !currentlyOpen;
+  saveCollapseState();
+  buildSidebar();
+}
+
+function getSectionTitle(sectionMd) {
+  var match = sectionMd.match(/^#{1,2}\s+(.+)/m);
+  if (match) {
+    return match[1].trim().replace(/\*\*/g, '').replace(/`/g, '').replace(/\*/g, '');
+  }
+  var lines = sectionMd.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (line) return line.substring(0, 60);
+  }
+  return 'Section';
+}
+
+function updateSidebarActiveSection(idx) {
+  var items = document.querySelectorAll('.sidebar-section-item');
+  items.forEach(function(el, i) {
+    el.classList.toggle('active', i === idx);
+  });
+  if (items[idx]) items[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function simplifyTitle(title) {
@@ -207,7 +310,7 @@ function renderSections(md) {
   // Ensure all slides start scrolled to top
   container.querySelectorAll('.section-slide').forEach(function(s) { s.scrollTop = 0; });
 
-  container.querySelectorAll('pre code').forEach(function(block) { hljs.highlightElement(block); });
+  container.querySelectorAll('pre code').forEach(function(block) { Prism.highlightElement(block); });
 
   if (sections.length > 1) {
     document.getElementById('sectionNav').style.display = 'flex';
@@ -244,6 +347,11 @@ function updateSlides() {
   document.querySelectorAll('.section-dot').forEach(function(dot, idx) {
     dot.classList.toggle('active', idx === currentSlideIdx);
   });
+
+  updateSidebarActiveSection(currentSlideIdx);
+  updateBreadcrumb();
+  closeToc();
+  buildToc();
 }
 
 function buildDots() {
@@ -311,8 +419,8 @@ function restoreDarkMode() {
     document.documentElement.classList.add('dark');
     var icon = document.getElementById('darkIcon');
     if (icon) icon.innerHTML = '&#9788;';
-    var lightTheme = document.querySelector('.hljs-theme[data-theme="light"]');
-    var darkTheme = document.querySelector('.hljs-theme[data-theme="dark"]');
+    var lightTheme = document.querySelector('.prism-theme[data-theme="light"]');
+    var darkTheme = document.querySelector('.prism-theme[data-theme="dark"]');
     if (lightTheme) lightTheme.disabled = true;
     if (darkTheme) darkTheme.disabled = false;
   }
@@ -323,8 +431,8 @@ function toggleDark() {
   localStorage.setItem('darkMode', isDark ? '1' : '0');
   var icon = document.getElementById('darkIcon');
   if (icon) icon.innerHTML = isDark ? '&#9788;' : '&#9789;';
-  var lightTheme = document.querySelector('.hljs-theme[data-theme="light"]');
-  var darkTheme = document.querySelector('.hljs-theme[data-theme="dark"]');
+  var lightTheme = document.querySelector('.prism-theme[data-theme="light"]');
+  var darkTheme = document.querySelector('.prism-theme[data-theme="dark"]');
   if (lightTheme) lightTheme.disabled = isDark;
   if (darkTheme) darkTheme.disabled = !isDark;
 }
@@ -374,6 +482,90 @@ function copyCode(btn) {
       btn.textContent = 'Copy';
     }, 2000);
   });
+}
+
+function updateBreadcrumb() {
+  var bc = document.getElementById('breadcrumb');
+  if (!bc) return;
+  var crumbs = [{ label: 'Go Concurrency', current: false }];
+  if (currentPageId && courseData) {
+    if (currentPageId.indexOf('_overview/') === 0) {
+      var ovFilename = currentPageId.replace('_overview/', '');
+      var ov = courseData.overview ? courseData.overview.find(function(o) { return o.filename === ovFilename; }) : null;
+      if (ov) crumbs.push({ label: ov.title, current: sections.length === 0 });
+    } else {
+      var chapterId = currentPageId.split('/')[0];
+      var chapter = courseData.chapters.find(function(c) { return c.id === chapterId; });
+      if (chapter) crumbs.push({ label: chapter.title, current: false });
+      var partItem = allParts.find(function(p) { return p.fullId === currentPageId; });
+      if (partItem) crumbs.push({ label: simplifyTitle(partItem.part.title), current: sections.length === 0 });
+    }
+    if (sections.length > 0 && currentSlideIdx < sections.length) {
+      crumbs.push({ label: getSectionTitle(sections[currentSlideIdx]), current: true });
+    }
+  }
+  bc.innerHTML = crumbs.map(function(crumb, i) {
+    return (i > 0 ? '<span class="breadcrumb-sep">\u203a</span>' : '') +
+      '<span class="breadcrumb-item' + (crumb.current ? ' current' : '') + '">' +
+      escapeHtml(crumb.label) + '</span>';
+  }).join('');
+}
+
+function buildToc() {
+  var slides = document.querySelectorAll('.section-slide');
+  var slide = slides[currentSlideIdx];
+  var btn = document.getElementById('tocBtn');
+  var container = document.getElementById('tocItems');
+  if (!slide || !btn || !container) return;
+  var headings = slide.querySelectorAll('h3, h4');
+  if (headings.length === 0) {
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = '';
+  var html = '';
+  headings.forEach(function(h, i) {
+    h.setAttribute('data-toc-id', 'ti' + i);
+    var text = h.textContent.trim();
+    var cls = 'toc-item' + (h.tagName === 'H4' ? ' sub' : '');
+    html += '<div class="' + cls + '" onclick="scrollToHeading(\'ti' + i + '\')">' + escapeHtml(text) + '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function scrollToHeading(id) {
+  var slides = document.querySelectorAll('.section-slide');
+  var slide = slides[currentSlideIdx];
+  if (!slide) return;
+  var el = slide.querySelector('[data-toc-id="' + id + '"]');
+  if (!el) return;
+  var slideRect = slide.getBoundingClientRect();
+  var elRect = el.getBoundingClientRect();
+  slide.scrollTo({ top: slide.scrollTop + (elRect.top - slideRect.top) - 20, behavior: 'smooth' });
+  closeToc();
+}
+
+function toggleToc() {
+  var panel = document.getElementById('tocPanel');
+  var backdrop = document.getElementById('tocBackdrop');
+  var btn = document.getElementById('tocBtn');
+  if (!panel) return;
+  if (panel.classList.contains('open')) {
+    closeToc();
+  } else {
+    panel.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
+    if (btn) btn.classList.add('active');
+  }
+}
+
+function closeToc() {
+  var panel = document.getElementById('tocPanel');
+  var backdrop = document.getElementById('tocBackdrop');
+  var btn = document.getElementById('tocBtn');
+  if (panel) panel.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  if (btn) btn.classList.remove('active');
 }
 
 document.addEventListener('keydown', function(e) {
