@@ -1011,3 +1011,162 @@ html.dark .section-content pre code {
 html.dark img {
   opacity: 0.85;
 }
+
+/* ── Collapsible Sub-Sections ──────────────────────────────────────────────── */
+
+.section-content h3.subsection-heading {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  transition: color 0.12s;
+}
+
+.section-content h3.subsection-heading:hover {
+  color: var(--accent-dark);
+}
+
+.subsection-caret {
+  font-size: 9px;
+  color: var(--text-light);
+  flex-shrink: 0;
+  margin-top: 5px;
+  width: 14px;
+  text-align: center;
+  display: inline-block;
+  transform: rotate(0deg);
+  transition: transform 0.2s ease, color 0.2s ease;
+  line-height: 1;
+}
+
+.subsection-caret::before {
+  content: '\25B6';
+}
+
+.subsection-caret.open {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+
+.subsection-body.collapsed {
+  display: none;
+}
+
+/* ── Sticky Jump Bar ───────────────────────────────────────────────────────── */
+
+.jump-bar {
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+  height: 38px;
+  background: var(--bg-warm);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  /* display is toggled by JS between 'none' and 'flex' */
+}
+
+.jump-bar-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.jump-bar-btn {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.jump-bar-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.jump-bar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.jump-bar-nav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.jump-bar-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.jump-bar-progress {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-weight: 500;
+}
+
+.jump-bar-select-wrap {
+  flex-shrink: 0;
+}
+
+.jump-bar-select {
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  cursor: pointer;
+  max-width: 200px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.jump-bar-select:focus,
+.jump-bar-select:hover {
+  border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .jump-bar {
+    padding: 0 12px;
+    gap: 6px;
+  }
+  .jump-bar-actions,
+  .jump-bar-sep:first-of-type {
+    display: none;
+  }
+  .jump-bar-select {
+    max-width: 130px;
+  }
+}

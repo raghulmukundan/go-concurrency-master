@@ -14,6 +14,7 @@ var readParts = new Set(JSON.parse(localStorage.getItem('readParts') || '[]'));
 var collapseState = JSON.parse(localStorage.getItem('collapseState') || '{}');
 var sections = [];
 var currentSlideIdx = 0;
+var subsectionState = {}; // subsectionState[slideIdx][subsectionIdx] = true (expanded) / false (collapsed)
 
 // Restore preferences
 restoreDarkMode();
@@ -300,10 +301,19 @@ function renderSections(md) {
     }
 
     slide.innerHTML = '<div class="section-content">' + html + '</div>';
+    wrapCollapsibleH3s(slide, idx);
     container.appendChild(slide);
+    (function(s, sIdx) {
+      s.addEventListener('scroll', function() {
+        if (currentSlideIdx !== sIdx) return;
+        var ws = s.querySelectorAll('.subsection-wrapper');
+        if (ws.length > 0) updateActiveSubsection(s, ws);
+      });
+    })(slide, idx);
   });
 
   currentSlideIdx = 0;
+  buildJumpBarContainer();
   updateSlides();
   buildDots();
 
@@ -352,6 +362,7 @@ function updateSlides() {
   updateBreadcrumb();
   closeToc();
   buildToc();
+  updateJumpBar();
 }
 
 function buildDots() {
@@ -482,6 +493,206 @@ function copyCode(btn) {
       btn.textContent = 'Copy';
     }, 2000);
   });
+}
+
+// ── Collapsible Sub-Sections ─────────────────────────────────────────────────
+
+function wrapCollapsibleH3s(slideEl, slideIdx) {
+  var content = slideEl.querySelector('.section-content');
+  if (!content) return;
+
+  var children = Array.from(content.childNodes);
+  var hasH3 = children.some(function(n) { return n.nodeType === 1 && n.tagName === 'H3'; });
+  if (!hasH3) return;
+
+  var preH3 = [];
+  var groups = [];
+  var cur = null;
+
+  children.forEach(function(node) {
+    if (node.nodeType === 1 && node.tagName === 'H3') {
+      if (cur) groups.push(cur);
+      cur = { h3: node, nodes: [] };
+    } else if (cur) {
+      cur.nodes.push(node);
+    } else {
+      preH3.push(node);
+    }
+  });
+  if (cur) groups.push(cur);
+  if (groups.length === 0) return;
+
+  if (!subsectionState[slideIdx]) {
+    subsectionState[slideIdx] = groups.map(function() { return false; });
+  }
+
+  while (content.firstChild) content.removeChild(content.firstChild);
+  preH3.forEach(function(n) { content.appendChild(n); });
+
+  groups.forEach(function(group, gIdx) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'subsection-wrapper';
+    wrapper.dataset.slideIdx = slideIdx;
+    wrapper.dataset.subsectionIdx = gIdx;
+
+    var caret = document.createElement('span');
+    caret.className = 'subsection-caret';
+    group.h3.classList.add('subsection-heading');
+    group.h3.insertBefore(caret, group.h3.firstChild);
+    group.h3.addEventListener('click', (function(w) {
+      return function() { toggleSubsection(w); };
+    })(wrapper));
+
+    var body = document.createElement('div');
+    body.className = 'subsection-body';
+    group.nodes.forEach(function(n) { body.appendChild(n); });
+
+    wrapper.appendChild(group.h3);
+    wrapper.appendChild(body);
+    content.appendChild(wrapper);
+
+    applySubsectionState(wrapper, subsectionState[slideIdx][gIdx]);
+  });
+}
+
+function applySubsectionState(wrapper, expanded) {
+  var body = wrapper.querySelector('.subsection-body');
+  var caret = wrapper.querySelector('.subsection-caret');
+  if (!body) return;
+  body.classList.toggle('collapsed', !expanded);
+  if (caret) caret.classList.toggle('open', expanded);
+}
+
+function toggleSubsection(wrapper) {
+  var slideIdx = parseInt(wrapper.dataset.slideIdx);
+  var gIdx = parseInt(wrapper.dataset.subsectionIdx);
+  if (!subsectionState[slideIdx]) return;
+  subsectionState[slideIdx][gIdx] = !subsectionState[slideIdx][gIdx];
+  applySubsectionState(wrapper, subsectionState[slideIdx][gIdx]);
+  updateJumpBar();
+}
+
+function toggleAllSubsections(expand) {
+  var slides = document.querySelectorAll('.section-slide');
+  var slide = slides[currentSlideIdx];
+  if (!slide) return;
+  var wrappers = slide.querySelectorAll('.subsection-wrapper');
+  if (!subsectionState[currentSlideIdx]) subsectionState[currentSlideIdx] = [];
+  wrappers.forEach(function(wrapper, i) {
+    subsectionState[currentSlideIdx][i] = expand;
+    applySubsectionState(wrapper, expand);
+  });
+}
+
+// ── Sticky Jump Bar ───────────────────────────────────────────────────────────
+
+function buildJumpBarContainer() {
+  if (document.getElementById('jumpBar')) return;
+  var sectCont = document.getElementById('sectionsContainer');
+  if (!sectCont) return;
+  var bar = document.createElement('div');
+  bar.id = 'jumpBar';
+  bar.className = 'jump-bar';
+  bar.innerHTML =
+    '<div class="jump-bar-actions">' +
+      '<button class="jump-bar-btn" onclick="toggleAllSubsections(true)">Expand All</button>' +
+      '<button class="jump-bar-btn" onclick="toggleAllSubsections(false)">Collapse All</button>' +
+    '</div>' +
+    '<div class="jump-bar-sep"></div>' +
+    '<div class="jump-bar-nav">' +
+      '<span class="jump-bar-title" id="jumpBarTitle"></span>' +
+      '<span class="jump-bar-progress" id="jumpBarProgress"></span>' +
+    '</div>' +
+    '<div class="jump-bar-sep"></div>' +
+    '<div class="jump-bar-select-wrap">' +
+      '<select class="jump-bar-select" id="jumpBarSelect" onchange="jumpToSubsectionByIdx(parseInt(this.value))"></select>' +
+    '</div>';
+  var tocBtn = document.getElementById('tocBtn');
+  if (tocBtn) {
+    var sep3 = document.createElement('div');
+    sep3.className = 'jump-bar-sep';
+    bar.appendChild(sep3);
+    tocBtn.className = 'jump-bar-btn';
+    bar.appendChild(tocBtn);
+  }
+  sectCont.parentNode.insertBefore(bar, sectCont);
+}
+
+function updateJumpBar() {
+  var bar = document.getElementById('jumpBar');
+  if (!bar) return;
+
+  function setTocPanelTop(visible) {
+    var top = visible ? '74px' : '36px';
+    var p = document.getElementById('tocPanel');
+    var b = document.getElementById('tocBackdrop');
+    if (p) p.style.top = top;
+    if (b) b.style.top = top;
+  }
+
+  if (!sections || sections.length === 0) { bar.style.display = 'none'; setTocPanelTop(false); return; }
+  var slides = document.querySelectorAll('.section-slide');
+  var slide = slides[currentSlideIdx];
+  if (!slide) { bar.style.display = 'none'; setTocPanelTop(false); return; }
+  var wrappers = slide.querySelectorAll('.subsection-wrapper');
+  if (wrappers.length === 0) { bar.style.display = 'none'; setTocPanelTop(false); return; }
+  bar.style.display = 'flex';
+  setTocPanelTop(true);
+
+  var select = document.getElementById('jumpBarSelect');
+  if (select) {
+    select.innerHTML = '';
+    wrappers.forEach(function(wrapper, i) {
+      var h3 = wrapper.querySelector('.subsection-heading');
+      var text = h3 ? h3.textContent.trim() : ('Sub-section ' + (i + 1));
+      var opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = text;
+      select.appendChild(opt);
+    });
+  }
+
+  updateActiveSubsection(slide, wrappers);
+}
+
+function updateActiveSubsection(slide, wrappers) {
+  if (!wrappers || wrappers.length === 0) return;
+  var scrollTop = slide.scrollTop;
+  var activeIdx = 0;
+  wrappers.forEach(function(wrapper, i) {
+    var h3 = wrapper.querySelector('.subsection-heading');
+    if (!h3) return;
+    var top = 0, el = h3;
+    while (el && el !== slide) { top += el.offsetTop; el = el.offsetParent; }
+    if (top <= scrollTop + 80) activeIdx = i;
+  });
+
+  var titleEl = document.getElementById('jumpBarTitle');
+  var progressEl = document.getElementById('jumpBarProgress');
+  var select = document.getElementById('jumpBarSelect');
+  var activeH3 = wrappers[activeIdx] ? wrappers[activeIdx].querySelector('.subsection-heading') : null;
+  var activeText = activeH3 ? activeH3.textContent.trim() : ('Sub-section ' + (activeIdx + 1));
+
+  if (titleEl) titleEl.textContent = activeText;
+  if (progressEl) progressEl.textContent = (activeIdx + 1) + '\u202f/\u202f' + wrappers.length;
+  if (select) select.value = activeIdx;
+}
+
+function jumpToSubsectionByIdx(idx) {
+  var slides = document.querySelectorAll('.section-slide');
+  var slide = slides[currentSlideIdx];
+  if (!slide) return;
+  var wrappers = slide.querySelectorAll('.subsection-wrapper');
+  if (!wrappers[idx]) return;
+  if (subsectionState[currentSlideIdx] && subsectionState[currentSlideIdx][idx] === false) {
+    subsectionState[currentSlideIdx][idx] = true;
+    applySubsectionState(wrappers[idx], true);
+  }
+  var h3 = wrappers[idx].querySelector('.subsection-heading');
+  if (!h3) return;
+  var top = 0, el = h3;
+  while (el && el !== slide) { top += el.offsetTop; el = el.offsetParent; }
+  slide.scrollTo({ top: Math.max(0, top - 10), behavior: 'smooth' });
 }
 
 function updateBreadcrumb() {
