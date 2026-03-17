@@ -525,7 +525,7 @@ body {
 }
 
 .section-content pre {
-  margin: 16px 0 20px;
+  margin: 16px -12px 20px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--code-border);
   position: relative;
@@ -543,7 +543,7 @@ body {
   overflow-x: auto;
 }
 
-.section-content pre code::-webkit-scrollbar { height: 4px; }
+.section-content pre code::-webkit-scrollbar { height: 6px; }
 .section-content pre code::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 .code-lang {
